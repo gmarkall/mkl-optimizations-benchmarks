@@ -22,10 +22,7 @@ class BenchCholesky(Benchmark):
         return (M*M*M/3.0 + M*M/2.0) * 1e-9
 
     def units(self, experiment):
-        if experiment['dtype'] is np.double:
-            return "GFLOPS (double)"
-        else:
-            return "GFLOPS (single)"
+        return 'GFLOPS ({0})'.format(float_name[experiment['dtype']])
 
     def name(self, experiment):
         M = experiment['dim']
