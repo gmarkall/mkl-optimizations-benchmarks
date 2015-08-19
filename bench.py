@@ -18,6 +18,40 @@ from numba import cuda
 
 data_dir = './'
 
+def time_sgemm_cuda(N=100, trials=3, dtype=np.float):
+    A = np.asarray(np.random.rand(N, N), dtype=dtype)
+    B = np.asarray(np.random.rand(N, N), dtype=dtype)
+    C = np.zeros((N, N), dtype=dtype)
+    d_A = cuda.to_device(A)
+    d_B = cuda.to_device(B)
+    d_C = cuda.to_device(C)
+    blas = Blas()
+    gcold = gc.isenabled()
+    gc.disable()
+    tic = time.time()
+    for i in xrange(trials):
+        blas.gemm('N', 'N', N, N, N, 1.0, d_A, d_B, 1.0, d_C )
+    cuda.synchronize()
+    toc = time.time()-tic
+    if gcold:
+        gc.enable()
+    return toc/trials, 2*N*N*N*1e-9
+
+def time_sgemm(N=100, trials=3, dtype=np.float):
+    A = np.asarray(np.random.rand(N, N), dtype=dtype)
+    B = np.asarray(np.random.rand(N, N), dtype=dtype)
+    gcold = gc.isenabled()
+    gc.disable()
+    tic = time.time()
+    for i in xrange(trials):
+        C = A.dot(B)
+    toc = time.time()-tic
+    if gcold:
+        gc.enable()
+    return toc/trials, 2*N*N*N*1e-9
+
+
+
 def time_dgemm_cuda(N=100, trials=3, dtype=np.double):
     A = np.asarray(np.random.rand(N, N), dtype=dtype)
     B = np.asarray(np.random.rand(N, N), dtype=dtype)
@@ -121,6 +155,7 @@ if __name__ == '__main__':
         use_cuda = True
         backend = 'CUDA'
     else:
+        use_cuda = False
         try:
             import mkl
             have_mkl = True
@@ -145,6 +180,14 @@ if __name__ == '__main__':
     else:
         dgemm_data = bench(time_dgemm, Ns, trials, dtype)
     dump_data(dgemm_data, data_dir, backend, 'DGEMM')
+
+    print('benchmarking SGEMM')
+    if use_cuda:
+        sgemm_data = bench(time_sgemm_cuda, Ns, trials, np.float)
+    else:
+        sgemm_data = bench(time_sgemm, Ns, trials, np.float)
+    dump_data(sgemm_data, data_dir, backend, 'SGEMM')
+
 
     #print('benchmarking Cholesky')
     #cholesky_data = bench(time_cholesky, Ns, trials, dtype)

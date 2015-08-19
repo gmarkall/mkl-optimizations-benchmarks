@@ -60,6 +60,11 @@ if __name__ == '__main__':
                  'GFLOP/s',
                  'higher is better')
 
+    plot_results('SGEMM',
+                 load_data('SGEMM'),
+                 r'Matrix Size',
+                 'GFLOP/s',
+                 'higher is better')
     #plot_results('Cholesky',
     #             load_data('Cholesky'),
     #             r'Matrix Size',
