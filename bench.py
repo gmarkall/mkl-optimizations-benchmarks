@@ -18,7 +18,7 @@ from numba import cuda
 
 data_dir = './'
 
-def time_sgemm_cuda(N=100, trials=3, dtype=np.float):
+def time_sgemm_cuda(N=100, trials=3, dtype=np.float32):
     A = np.asarray(np.random.rand(N, N), dtype=dtype)
     B = np.asarray(np.random.rand(N, N), dtype=dtype)
     C = np.zeros((N, N), dtype=dtype)
@@ -37,7 +37,7 @@ def time_sgemm_cuda(N=100, trials=3, dtype=np.float):
         gc.enable()
     return toc/trials, 2*N*N*N*1e-9
 
-def time_sgemm(N=100, trials=3, dtype=np.float):
+def time_sgemm(N=100, trials=3, dtype=np.float32):
     A = np.asarray(np.random.rand(N, N), dtype=dtype)
     B = np.asarray(np.random.rand(N, N), dtype=dtype)
     gcold = gc.isenabled()
@@ -183,9 +183,9 @@ if __name__ == '__main__':
 
     print('benchmarking SGEMM')
     if use_cuda:
-        sgemm_data = bench(time_sgemm_cuda, Ns, trials, np.float)
+        sgemm_data = bench(time_sgemm_cuda, Ns, trials, np.float32)
     else:
-        sgemm_data = bench(time_sgemm, Ns, trials, np.float)
+        sgemm_data = bench(time_sgemm, Ns, trials, np.float32)
     dump_data(sgemm_data, data_dir, backend, 'SGEMM')
 
 
