@@ -13,8 +13,29 @@ import time
 import gc
 import os.path
 import cPickle as pickle
+from numbapro.cudalib.cublas import Blas
+from numba import cuda
 
 data_dir = './'
+
+def time_dgemm_cuda(N=100, trials=3, dtype=np.double):
+    A = np.asarray(np.random.rand(N, N), dtype=dtype)
+    B = np.asarray(np.random.rand(N, N), dtype=dtype)
+    C = np.zeros((N, N), dtype=dtype)
+    d_A = cuda.to_device(A)
+    d_B = cuda.to_device(B)
+    d_C = cuda.to_device(C)
+    blas = Blas()
+    gcold = gc.isenabled()
+    gc.disable()
+    tic = time.time()
+    for i in xrange(trials):
+        blas.gemm('N', 'N', N, N, N, 1.0, d_A, d_B, 1.0, d_C )
+    cuda.synchronize()
+    toc = time.time()-tic
+    if gcold:
+        gc.enable()
+    return toc/trials, 2*N*N*N*1e-9
 
 def time_dgemm(N=100, trials=3, dtype=np.double):
     A = np.asarray(np.random.rand(N, N), dtype=dtype)
@@ -95,35 +116,43 @@ def dump_data(data, data_dir, backend, algo):
         pickle.dump(data, data_file)
 
 if __name__ == '__main__':
-    try:
-        import mkl
-        have_mkl = True
-        backend = 'anaconda+mkl'
-        print("Running with MKL Acceleration")
-    except ImportError:
-        have_mkl = False
-        backend = 'anaconda'
-        print("Running with normal backends")
+    if sys.argv[1] == 'cuda':
+        print('Running with CUDA')
+        use_cuda = True
+        backend = 'CUDA'
+    else:
+        try:
+            import mkl
+            have_mkl = True
+            backend = 'anaconda+mkl'
+            print("Running with MKL Acceleration")
+        except ImportError:
+            have_mkl = False
+            backend = 'anaconda'
+            print("Running with normal backends")
 
     print("checking timers...")
     test_timers()
     logNs = np.arange(6,13.5,0.5) # uncomment to run the big stuff
 #    logNs = np.arange(3,7,0.5) # uncomment to run quick tests
-    Ns = np.exp2(logNs)
+    Ns = np.exp2(logNs).astype(np.int32)
     trials = 5
     dtype = np.double
 
     print('benchmarking DGEMM')
-    dgemm_data = bench(time_dgemm, Ns, trials, dtype)
+    if use_cuda:
+        dgemm_data = bench(time_dgemm_cuda, Ns, trials, dtype)
+    else:
+        dgemm_data = bench(time_dgemm, Ns, trials, dtype)
     dump_data(dgemm_data, data_dir, backend, 'DGEMM')
 
-    print('benchmarking Cholesky')
-    cholesky_data = bench(time_cholesky, Ns, trials, dtype)
-    dump_data(cholesky_data, data_dir, backend, 'Cholesky')
+    #print('benchmarking Cholesky')
+    #cholesky_data = bench(time_cholesky, Ns, trials, dtype)
+    #dump_data(cholesky_data, data_dir, backend, 'Cholesky')
 
-    print('benchmarking NumExpr')
-    logNs = np.arange(12, 18.5, 0.5) # uncomment to run big tests
+    #print('benchmarking NumExpr')
+    #logNs = np.arange(12, 18.5, 0.5) # uncomment to run big tests
 #    logNs = np.arange(6,13.5,0.5) # uncomment to run quick tests
-    Ns = np.exp2(logNs)
-    numexpr_data = bench(time_numexpr, Ns, trials, dtype)
-    dump_data(numexpr_data, data_dir, backend, 'NumExpr')
+    #Ns = np.exp2(logNs)
+    #numexpr_data = bench(time_numexpr, Ns, trials, dtype)
+    #dump_data(numexpr_data, data_dir, backend, 'NumExpr')

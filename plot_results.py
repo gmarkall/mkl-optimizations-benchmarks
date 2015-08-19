@@ -15,7 +15,7 @@ import cPickle as pickle
 from matplotlib import ticker
 
 data_dir = './'
-backends = ['anaconda', 'anaconda+mkl']
+backends = ['anaconda+mkl', 'CUDA']
 
 
 def plot_results(algo, datas, xlabel, ylabel, note, factor=None):
@@ -60,14 +60,14 @@ if __name__ == '__main__':
                  'GFLOP/s',
                  'higher is better')
 
-    plot_results('Cholesky',
-                 load_data('Cholesky'),
-                 r'Matrix Size',
-                 'GFLOP/s',
-                 'higher is better')
+    #plot_results('Cholesky',
+    #             load_data('Cholesky'),
+    #             r'Matrix Size',
+    #             'GFLOP/s',
+    #             'higher is better')
 
-    plot_results('NumExpr',
-                 load_data('NumExpr'),
-                 r'Array Size',
-                 'GB/s',
-                 'higher is better')
+    #plot_results('NumExpr',
+    #             load_data('NumExpr'),
+    #             r'Array Size',
+    #             'GB/s',
+     #            'higher is better')
