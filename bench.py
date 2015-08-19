@@ -18,19 +18,31 @@ from numba import cuda
 
 data_dir = './'
 
-def time_sgemm_cuda(N=100, trials=3, dtype=np.float32):
+def time_sgemm_cuda(N=100, trials=3, dtype=np.float32, on_gpu=None):
+    if on_gpu is None:
+        raise RuntimeError("ARGH")
     A = np.asarray(np.random.rand(N, N), dtype=dtype)
     B = np.asarray(np.random.rand(N, N), dtype=dtype)
     C = np.zeros((N, N), dtype=dtype)
-    d_A = cuda.to_device(A)
-    d_B = cuda.to_device(B)
-    d_C = cuda.to_device(C)
+    if on_gpu:
+        print("ON GPU")
+        d_A = cuda.to_device(A)
+        d_B = cuda.to_device(B)
+        d_C = cuda.to_device(C)
+        arg_A = d_A
+        arg_B = d_B
+        arg_C = d_C
+    else:
+        print("ON HOST")
+        arg_A = A
+        arg_B = B
+        arg_C = C
     blas = Blas()
     gcold = gc.isenabled()
     gc.disable()
     tic = time.time()
     for i in xrange(trials):
-        blas.gemm('N', 'N', N, N, N, 1.0, d_A, d_B, 1.0, d_C )
+        blas.gemm('N', 'N', N, N, N, 1.0, arg_A, arg_B, 1.0, arg_C )
     cuda.synchronize()
     toc = time.time()-tic
     if gcold:
@@ -52,19 +64,31 @@ def time_sgemm(N=100, trials=3, dtype=np.float32):
 
 
 
-def time_dgemm_cuda(N=100, trials=3, dtype=np.double):
+def time_dgemm_cuda(N=100, trials=3, dtype=np.double, on_gpu=None):
+    if on_gpu is None:
+        raise RuntimeError("ARGH")
     A = np.asarray(np.random.rand(N, N), dtype=dtype)
     B = np.asarray(np.random.rand(N, N), dtype=dtype)
     C = np.zeros((N, N), dtype=dtype)
-    d_A = cuda.to_device(A)
-    d_B = cuda.to_device(B)
-    d_C = cuda.to_device(C)
+    if on_gpu:
+        print("ON GPU")
+        d_A = cuda.to_device(A)
+        d_B = cuda.to_device(B)
+        d_C = cuda.to_device(C)
+        arg_A = d_A
+        arg_B = d_B
+        arg_C = d_C
+    else:
+        print("ON HOST")
+        arg_A = A
+        arg_B = B
+        arg_C = C
     blas = Blas()
     gcold = gc.isenabled()
     gc.disable()
     tic = time.time()
     for i in xrange(trials):
-        blas.gemm('N', 'N', N, N, N, 1.0, d_A, d_B, 1.0, d_C )
+        blas.gemm('N', 'N', N, N, N, 1.0, arg_A, arg_B, 1.0, arg_C )
     cuda.synchronize()
     toc = time.time()-tic
     if gcold:
@@ -122,7 +146,7 @@ def test_timers():
     s, gbyte = time_numexpr(50000, trials, dtype)
     print("NumExpr : N: %d s: %e GBytes/s: %e" % (N, s, gbyte/s))
 
-def bench(test_fun, Ns, trials, dtype=None):
+def bench(test_fun, Ns, trials, dtype=None, on_gpu=True):
     data = np.empty((len(Ns),2))
     print("%d tests" % len(Ns))
     tic = time.time()
@@ -130,8 +154,9 @@ def bench(test_fun, Ns, trials, dtype=None):
         sys.stdout.write('.')
         sys.stdout.flush()
         if dtype is not None:
-            out_tuple= test_fun(Ns[i],trials,dtype)
+            out_tuple= test_fun(Ns[i],trials,dtype,on_gpu)
         else:
+            raise RuntimeError("dont go here")
             out_tuple= test_fun(Ns[i],trials)
 
         if len(out_tuple) > 1:
@@ -153,7 +178,13 @@ if __name__ == '__main__':
     if sys.argv[1] == 'cuda':
         print('Running with CUDA')
         use_cuda = True
-        backend = 'CUDA'
+        on_gpu = True
+        backend = 'CUDA-devarray'
+    elif sys.argv[1] == 'cuda_host':
+        print('Running with CUDA, arrays on host')
+        use_cuda=True
+        on_gpu = False
+        backend = 'CUDA-hostarray'
     else:
         use_cuda = False
         try:
@@ -176,14 +207,14 @@ if __name__ == '__main__':
 
     print('benchmarking DGEMM')
     if use_cuda:
-        dgemm_data = bench(time_dgemm_cuda, Ns, trials, dtype)
+        dgemm_data = bench(time_dgemm_cuda, Ns, trials, dtype, on_gpu)
     else:
         dgemm_data = bench(time_dgemm, Ns, trials, dtype)
     dump_data(dgemm_data, data_dir, backend, 'DGEMM')
 
     print('benchmarking SGEMM')
     if use_cuda:
-        sgemm_data = bench(time_sgemm_cuda, Ns, trials, np.float32)
+        sgemm_data = bench(time_sgemm_cuda, Ns, trials, np.float32, on_gpu)
     else:
         sgemm_data = bench(time_sgemm, Ns, trials, np.float32)
     dump_data(sgemm_data, data_dir, backend, 'SGEMM')

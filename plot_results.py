@@ -15,7 +15,7 @@ import cPickle as pickle
 from matplotlib import ticker
 
 data_dir = './'
-backends = ['anaconda+mkl', 'CUDA']
+backends = ['anaconda+mkl', 'CUDA-devarray', 'CUDA-hostarray']
 
 
 def plot_results(algo, datas, xlabel, ylabel, note, factor=None):
@@ -34,7 +34,7 @@ def plot_results(algo, datas, xlabel, ylabel, note, factor=None):
     plt.xlabel(xlabel, fontsize=16)
     plt.ylabel(ylabel, fontsize=16)
     plt.xlim(datas[0][0,0]*.9, datas[0][-1,0]*1.1)
-    plt.suptitle("%s Performance" % (algo), fontsize=28)
+    #plt.suptitle("%s Performance" % (algo), fontsize=28)
 
     for backend, data in zip(backends, datas):
         N = data[:, 0]
